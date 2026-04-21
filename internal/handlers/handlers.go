@@ -39,10 +39,8 @@ func respondWithJSON(w http.ResponseWriter, statusCode int, payload interface{})
 }
 
 // respondWithError — это вспомогательная функция для отправки JSON-ответов с сообщением об ошибке.
-//
-// Она устанавливает заголовок Content-Type в application/json, задаёт статус ответа
-// и отправляет JSON-объект с полем "error", содержащим текст сообщения об ошибке.
-// Это позволяет стандартизировать формат ошибок и упростить обработку ошибок на клиентской стороне.
+// Она вызывает respondWithJSON, передавая статус ошибки и объект с полем "error", содержащим сообщение об ошибке.
+// Это позволяет стандартизировать формат ошибок в ответах и упростить обработку ошибок на клиентской стороне.
 func respondWithError(w http.ResponseWriter, statusCode int, message string) {
 	respondWithJSON(w, statusCode, map[string]string{"error": message})
 }
