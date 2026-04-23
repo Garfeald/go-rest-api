@@ -1,26 +1,50 @@
 version: '3.8'
 
 services:
+  # База данных PostgreSQL для хранения задач
   postgres:
+    # Используем легковесный образ Alpine для уменьшения размера
     image: postgres:15-alpine
     container_name: tasks-postgres
+    # Учетные данные и имя базы, создаваемые при первом запуске
     environment:
       POSTGRES_DB: tasksdb
       POSTGRES_USER: taskuser
       POSTGRES_PASSWORD: taskpass
 
+    # Пробрасываем порт БД на хост для удобной отладки (pgAdmin, psql)
     ports:
-      - "5433:5432"
+      - "5432:5432"
 
     volumes:
+      # Сохраняем данные БД между перезапусками контейнера
       - postgres_data:/var/lib/postgresql/data
+      # Автоматически выполняем init.sql при первом создании БД (создание таблиц)
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    # Проверка готовности БД — API не стартует, пока postgres не пройдет healthcheck
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U taskuser -d tasksdb" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # REST API сервис (Go-приложение)
+  api:
+    # Собираем образ из Dockerfile в корне проекта
+    build: .
+    container_name: tasks-api
+    # Пробрасываем порт API на хост
+    ports:
+      - "8080:8080"
+    # Ждем запуска postgres перед стартом API
+    depends_on:
+      - postgres
+    # Строка подключения к БД внутри docker-сети (имя хоста = имя сервиса postgres)
+    environment:
+      DATABASE_URL: "postgres://taskuser:taskpass@postgres:5432/tasksdb?sslmode=disable"
+
+# Именованный том для персистентного хранения данных PostgreSQL
 volumes:
   postgres_data:
 
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pg_isready -U taskuser -d tasksdb"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 5
+
